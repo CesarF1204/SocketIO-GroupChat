@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Chat</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script>
+        $(document).ready(function() {
+            let socket = io.connect(); // socket.io connection
+            let name = prompt("Enter your name: "); // creating user
+            if(name == null || name == ''){ // guest user
+                name = 'Guest';
+            } else {
+                name = name;
+            }
+            //user that has logged in
+            //console.log(name);
+            $("#user_logged_in").html("Username: " + name);
+			socket.emit("new_user", {name:name});
+            $('.container').css('display', 'block');
+            //user entering chat room
+            socket.on("user_entered_chat", function(data) {
+                $("ul#chat-room").append("<li class='user-entered-chat'>" + data.response + "</li>");
+                socket.emit('update_log', {message: "<li class='user-entered-chat'>" + data.response + "</li>"})
+            });
+            //user chat logs
+            socket.on('chat_logs', function(data) {
+                $('ul#chat-room').append(data.chat_logs);
+			});
+            //getting userid and username
+            let user_id = '';
+			let user_name = '';
+			socket.on('user_id', function(data) {
+				user_id = data.user_id;
+				user_name = data.name;
+			});
+            //sending a message
+            $('form').submit(function() {
+                socket.emit("send_chat_message", {
+                    name: user_name,
+                    id: user_id,
+                    message: $('form input[name="message"]').val()
+                });
+                $('form input[type="text"]').val('');
+				return false;
+			});
+            //user disconnect
+            socket.on('user_disconnect', function(data){
+                $("ul#chat-room").append("<li class='user-left-chat'>"+data+" has left the chat room."+"</li>");
+            });
+            //updating message
+            socket.on('updated_message', function(data) {
+				$('ul#chat-room').append(data.message);
+			})
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h2>Conversation Board</h2>
+        <ul id="chat-room"></ul>
+        <form action="#" method="post">
+            <p id="user_logged_in"></p>
+            <input type="text" name="message" placeholder="Enter your message here..."> 
+			<input type="submit" value="Send">
+        </form>
+    </div>
+</body>
+</html>
